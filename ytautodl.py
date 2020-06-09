@@ -6,35 +6,14 @@ import os
 import subprocess
 import argparse
 from apikey import apikey
-from errors import *
-
-def validate_link():
-	link = input("Please provide a link: ")
-	try:
-		requests.get(link)
-		input_creaters(link)
-	except requests.exceptions.MissingSchema:
-		link_error()
-		validate_link()
-		print()
-
-def input_creaters(link):
-	try:
-		upload_playlist = "UU" + link.split("/")[4][2::]
-		print("\nThank you")
-	except IndexError:
-		yt_link_error()
-		validate_link()
-	else:
-		return upload_playlist
+from validation import *
 
 def request_uploads(playlist_ID = None):
+	data = {}
 	if playlist_ID == None:
 		''' Check the database '''
 		pass
 	else:
-		data = {}
-		playlist_ID = input_creaters()
 		r = requests.get("https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=" + playlist_ID + "&key=" + apikey)
 		print(r)
 		response = r.json()["items"]
@@ -44,10 +23,9 @@ def request_uploads(playlist_ID = None):
 			data.update({date:videoID}) 
 	return data
 
-def download_video():
+def download_video(uploads):
 	today = datetime.datetime.now().isoformat()[0:10]
 	ytprefix = "https://www.youtube.com/watch?v="
-	uploads = request_uploads()
 	for i in uploads:
 		if i == today:
 			download = ytprefix + uploads[i]
@@ -60,18 +38,17 @@ def download_video():
 
 def main():
 	parser = argparse.ArgumentParser(description="Download Youtube Videos Automatically")
-
 	parser.add_argument("-new", action='store_true', help="Add a youtube creator to the database.")
-
 	args = parser.parse_args()
 
 	if args.new:
-		validate_link()
+		link = validate_link()
+		playlist_id = input_creaters(link)
+		todays_uploads = request_uploads(playlist_id)
+		download_video(todays_uploads)
+
 	else:
 		pass
-
-
-
 
 if __name__ == "__main__":
 	main()
