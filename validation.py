@@ -1,24 +1,38 @@
 import requests
-from errors import *
+import sys
+import time
 
-def validate_link():
-	link = input("Please provide a link: ")
-	try:
-		requests.get(link)
-	except requests.exceptions.MissingSchema:
-		link_error()
-		validate_link()
-		print()
-	else:
-		print(link)
-		return link
+def input_validation():
 
-def input_creaters(link):
-	try:
-		playlist_ID = "UU" + link.split("/")[4][2::]
-		print("\nThank you")
-	except IndexError:
-		yt_link_error()
-		validate_link()
-	else:
-		return playlist_ID
+	link = ""
+
+	def link_error():
+		error_message ='''\n\nThis is not the link we were looking for... 
+						\nThis is Google's youtube account: https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA 
+						\nThis is the kind of url we are looking for\n\n'''
+		for c in error_message:
+			sys.stdout.write(c)
+			sys.stdout.flush()
+			time.sleep(1/90)
+
+	def validate_link():
+		try:
+			nonlocal link
+			link = input("Please provide a link: ")
+			r = requests.get(link)
+		except requests.exceptions.MissingSchema:
+			link_error()
+			validate_link()
+	
+	def validate_yt():
+		try:
+			playlist_ID = "UU" + link.split("/")[4][2::]
+		except IndexError:
+			link_error()
+		else:
+			return playlist_ID
+
+	return link
+
+if __name__ == "__main__":
+	input_validation()

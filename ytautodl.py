@@ -10,11 +10,13 @@ from validation import *
 
 def request_uploads(playlist_ID = None):
 	data = {}
+	link = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=" + playlist_ID + "&key=" + apikey
+	print(link)
 	if playlist_ID == None:
 		''' Check the database '''
 		pass
 	else:
-		r = requests.get("https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=" + playlist_ID + "&key=" + apikey)
+		r = requests.get(link)
 		print(r)
 		response = r.json()["items"]
 		for i in response:
@@ -42,12 +44,12 @@ def main():
 	args = parser.parse_args()
 
 	if args.new:
-		link = validate_link()
-		playlist_id = input_creaters(link)
-		todays_uploads = request_uploads(playlist_id)
-		download_video(todays_uploads)
+		playlist_id = input_validation()
+		# todays_uploads = request_uploads(playlist_id)
+		# download_video(todays_uploads)
 
 	else:
+		''' Check creators in database '''
 		pass
 
 if __name__ == "__main__":
