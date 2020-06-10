@@ -1,38 +1,49 @@
 import requests
 import sys
 import time
+import re
 
-def input_validation():
+class Validate:
+	''' Checks for valid youtube link '''
+	def __init__(self, url):
+		self.url = url
+		self.validate_link(self.url)
 
-	link = ""
-
-	def link_error():
+	def link_error(self):
+		''' Error message for invalid link. '''
 		error_message ='''\n\nThis is not the link we were looking for... 
 						\nThis is Google's youtube account: https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA 
 						\nThis is the kind of url we are looking for\n\n'''
 		for c in error_message:
 			sys.stdout.write(c)
 			sys.stdout.flush()
-			time.sleep(1/90)
+			time.sleep(.009)
+		self.url = input("Please provide a link: ")
+		self.validate_link(self.url)
 
-	def validate_link():
+	def validate_link(self, url):
+		''' Validate if this is a url by sending a request to the url. '''
 		try:
-			nonlocal link
-			link = input("Please provide a link: ")
-			r = requests.get(link)
+			r = requests.get(self.url)
 		except requests.exceptions.MissingSchema:
-			link_error()
-			validate_link()
-	
-	def validate_yt():
-		try:
-			playlist_ID = "UU" + link.split("/")[4][2::]
-		except IndexError:
-			link_error()
+			self.link_error()
+			self.validate_link()
 		else:
-			return playlist_ID
+			# Calls validate_yt(), and returns the value if there is no error.
+			return self.validate_yt()
+	
+	def validate_yt(self):
+		''' Parse url to check if this is a valid youtube link. '''
+		try:
+			self.url = "UU" + self.url.split("/")[4][2::]
+		except IndexError:
+			self.link_error()
 
-	return link
+	def __repr__(self):
+		return "{self.__class__.__name__}({self.url})".format(self=self)
+
+	def __str__(self):
+		return "{self.url}".format(self=self)
 
 if __name__ == "__main__":
-	input_validation()
+	print(Validate("https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA"))
