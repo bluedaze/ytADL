@@ -1,4 +1,3 @@
-import requests
 import sys
 import time
 import re
@@ -11,9 +10,10 @@ class Validate:
 
 	def link_error(self):
 		''' Error message for invalid link. '''
-		error_message ='''\n\nThis is not the link we were looking for... 
-						\nThis is Google's youtube account: https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA 
-						\nThis is the kind of url we are looking for\n\n'''
+		error_message = "\n\nThis is not the link we were looking for... "
+		error_message +="\n\nThis is Google's youtube account: https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA" 
+		error_message +="\n\nThis is the kind of url we are looking for\n\n"
+
 		for c in error_message:
 			sys.stdout.write(c)
 			sys.stdout.flush()
@@ -23,21 +23,13 @@ class Validate:
 
 	def validate_link(self, url):
 		''' Validate if this is a url by sending a request to the url. '''
-		try:
-			r = requests.get(self.url)
-		except requests.exceptions.MissingSchema:
+		regex = re.compile(r"(youtube.com/channel/UC)(.{22})")
+		mo = regex.search(self.url)
+
+		if mo == None:
 			self.link_error()
-			self.validate_link()
 		else:
-			# Calls validate_yt(), and returns the value if there is no error.
-			return self.validate_yt()
-	
-	def validate_yt(self):
-		''' Parse url to check if this is a valid youtube link. '''
-		try:
-			self.url = "UU" + self.url.split("/")[4][2::]
-		except IndexError:
-			self.link_error()
+			self.url = "UU" + mo.group()[22::]
 
 	def __repr__(self):
 		return "{self.__class__.__name__}({self.url})".format(self=self)
@@ -46,4 +38,4 @@ class Validate:
 		return "{self.url}".format(self=self)
 
 if __name__ == "__main__":
-	print(Validate("https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA"))
+	print(Validate("http://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA"))
