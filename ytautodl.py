@@ -14,17 +14,17 @@ def main():
 	if args.new:
 		# Only creates database and inserts new entry.
 		url = User_data()
-		print(url)
 		create_db()
 		request_uploads(url)
-	# else:
-	# 	request_uploads()
-	# 	# download_video()
+	else:
+		uploads = query_db()
+		for i in uploads:
+			request_uploads(i[2])
+			download_video()
 
-def request_uploads(playlist_id = None):
+def request_uploads(playlist_id):
 	link = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&key={apikey}".format(playlist_id = playlist_id, apikey= apikey)
 	r = requests.get(link)
-	print(r)
 	response = r.json()["items"]
 	for i in response:
 		channel_title = i["snippet"]["channelTitle"]
@@ -36,9 +36,7 @@ def request_uploads(playlist_id = None):
 		print(channel_title, channel_id, uploads_id, video_id, video_date)
 
 def download_video():
-	# Downloads videos based upon video_id
 	uploads = query_db()
-	count = 0
 	ytprefix = "https://www.youtube.com/watch?v="
 	for i in uploads:
 		channel_title = i[0]
@@ -47,8 +45,7 @@ def download_video():
 		video_id = i[3]
 		video_date = i[4]
 		download = ytprefix + video_id
-		count = count + 1
-		print("Downloading " + download)
+		print("Downloading " + channel_title + download)
 		fetch = subprocess.run(["youtube-dl", download], stdout=subprocess.DEVNULL)
 		print("The exit code was: %d" % fetch.returncode)
 

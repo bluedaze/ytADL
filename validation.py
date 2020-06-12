@@ -36,7 +36,6 @@ class User_data:
 		else:
 			self.url = "UU" + mo.group()[22::]
 
-
 def insert_data(*args):
 	insert_Sql = "INSERT INTO yt (channel_title, channel_id, uploads_id, video_id , video_date) VALUES (?, ?, ?, ?, ?)"
 	conn = sqlite3.connect('ytadl.db')
@@ -58,6 +57,7 @@ def create_db():
 def query_db():
 	#Retrieves video_id matching today's date from the database.
 	today = datetime.datetime.now().isoformat()[0:10]
+	print(today)
 	conn = sqlite3.connect("ytadl.db")
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
