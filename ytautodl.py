@@ -9,6 +9,7 @@ from validation import *
 def main():
 	parser = argparse.ArgumentParser(description="Download Youtube Videos Automatically")
 	parser.add_argument("-new", action='store_true', help="Add a youtube creator to the database.")
+	parser.add_argument("-d", action='store_true', help="Default argument. Checks database and downloads videos automatically")
 	args = parser.parse_args()
 
 	if args.new:
@@ -16,15 +17,18 @@ def main():
 		url = User_data()
 		create_db()
 		request_uploads(url)
-	else:
+	elif args.d:
 		uploads = query_db()
 		for i in uploads:
 			request_uploads(i[2])
 			download_video()
+	else:
+		print("You did not specify arguments. Type ytautodl.py -h for more information on how to run this program")
 
 def request_uploads(playlist_id):
 	link = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&key={apikey}".format(playlist_id = playlist_id, apikey= apikey)
 	r = requests.get(link)
+	print(r.text)
 	response = r.json()["items"]
 	for i in response:
 		channel_title = i["snippet"]["channelTitle"]
@@ -36,6 +40,7 @@ def request_uploads(playlist_id):
 		print(channel_title, channel_id, uploads_id, video_id, video_date)
 
 def download_video():
+	#TO DO: Need function to organize content into folders based on channel name.
 	uploads = query_db()
 	ytprefix = "https://www.youtube.com/watch?v="
 	for i in uploads:
@@ -50,4 +55,4 @@ def download_video():
 		print("The exit code was: %d" % fetch.returncode)
 
 if __name__ == "__main__":
-	download_video()
+	main()

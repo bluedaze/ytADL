@@ -40,13 +40,16 @@ def insert_data(*args):
 	insert_Sql = "INSERT INTO yt (channel_title, channel_id, uploads_id, video_id , video_date) VALUES (?, ?, ?, ?, ?)"
 	conn = sqlite3.connect('ytadl.db')
 	c = conn.cursor()
-	c.execute(insert_Sql, args)
+	try:
+		c.execute(insert_Sql, args)
+	except sqlite3.IntegrityError:
+		print("Already downloaded, skipping")
 	conn.commit()
 	c.close()
 	conn.close()
 
 def create_db():
-	table_sql = "CREATE TABLE IF NOT EXISTS yt (channel_title TEXT, channel_id TEXT, uploads_id TEXT, video_id TEXT, video_date TEXT)"
+	table_sql = "CREATE TABLE IF NOT EXISTS yt (channel_title TEXT, channel_id TEXT, uploads_id TEXT, video_id TEXT NOT NULL UNIQUE, video_date TEXT)"
 
 	conn = sqlite3.connect('ytadl.db')
 	c = conn.cursor()
@@ -55,7 +58,7 @@ def create_db():
 	conn.close()
 
 def query_db():
-	#Retrieves video_id matching today's date from the database.
+	# Retrieves video_id matching today's date from the database.
 	today = datetime.datetime.now().isoformat()[0:10]
 	print(today)
 	conn = sqlite3.connect("ytadl.db")
