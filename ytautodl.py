@@ -5,6 +5,7 @@ import subprocess
 import argparse
 from apikey import apikey
 from validation import *
+import os
 
 def main():
 	parser = argparse.ArgumentParser(description="Download Youtube Videos Automatically")
@@ -28,7 +29,6 @@ def main():
 def request_uploads(playlist_id):
 	link = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&key={apikey}".format(playlist_id = playlist_id, apikey= apikey)
 	r = requests.get(link)
-	print(r.text)
 	response = r.json()["items"]
 	for i in response:
 		channel_title = i["snippet"]["channelTitle"]
@@ -37,7 +37,6 @@ def request_uploads(playlist_id):
 		video_id = i["snippet"]["resourceId"]["videoId"]
 		video_date = i["snippet"]["publishedAt"][0:10]
 		insert_data(channel_title, channel_id, uploads_id, video_id, video_date)
-		print(channel_title, channel_id, uploads_id, video_id, video_date)
 
 def download_video():
 	#TO DO: Need function to organize content into folders based on channel name.
@@ -49,10 +48,20 @@ def download_video():
 		uploads_id = i[2]
 		video_id = i[3]
 		video_date = i[4]
+		path = "./" + channel_title
 		download = ytprefix + video_id
-		print("Downloading " + channel_title + download)
+		if os.path.isdir(path) == False:
+			try:
+				os.mkdir(path)
+			except OSError:
+				print ("Creation of the directory %s failed" % path)
+			else:
+				print ("Successfully created the directory %s " % path)
+		os.chdir(path)
+		print("Downloading " + channel_title + " " + download)
 		fetch = subprocess.run(["youtube-dl", download], stdout=subprocess.DEVNULL)
 		print("The exit code was: %d" % fetch.returncode)
+		os.chdir("..")
 
 if __name__ == "__main__":
 	main()

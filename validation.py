@@ -43,7 +43,7 @@ def insert_data(*args):
 	try:
 		c.execute(insert_Sql, args)
 	except sqlite3.IntegrityError:
-		print("Already downloaded, skipping")
+		pass
 	conn.commit()
 	c.close()
 	conn.close()
@@ -60,7 +60,6 @@ def create_db():
 def query_db():
 	# Retrieves video_id matching today's date from the database.
 	today = datetime.datetime.now().isoformat()[0:10]
-	print(today)
 	conn = sqlite3.connect("ytadl.db")
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
