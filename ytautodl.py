@@ -15,6 +15,8 @@ def main():
 
 	if args.new:
 		# Only creates database and inserts new entry.
+		#TODO: Show confirmation messages which displays which channel was added to database.
+		#TODO: Allow users to add channel by name.
 		url = User_data()
 		create_db()
 		request_uploads(url)
@@ -25,6 +27,8 @@ def main():
 		download_video()
 	else:
 		print("You did not specify arguments. Type ytautodl.py -h for more information on how to run this program")
+	#TODO: Create argument to query db for all youtube channels added to list.
+	#TODO: Create argument that will allow you to add from CSV.
 
 def request_uploads(playlist_id):
 	link = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={playlist_id}&key={apikey}".format(playlist_id = playlist_id, apikey= apikey)
@@ -36,7 +40,8 @@ def request_uploads(playlist_id):
 		uploads_id = i["snippet"]["playlistId"]
 		video_id = i["snippet"]["resourceId"]["videoId"]
 		video_date = i["snippet"]["publishedAt"][0:10]
-		insert_data(channel_title, channel_id, uploads_id, video_id, video_date)
+		video_title = i["snippet"]["title"]
+		insert_data(channel_title, channel_id, uploads_id, video_id, video_date, video_title)
 
 def download_video():
 	today = datetime.datetime.now().isoformat()[0:10]
@@ -47,20 +52,17 @@ def download_video():
 		channel_title = i[0]
 		video_id = i[1]
 		video_date = i[2]
-		path = "./" + channel_title
+		video_title = i[3]
+		path = os.getcwd() + "/" + channel_title
 		download = ytprefix + video_id
+		if os.path.isdir(path) == False:
+				os.mkdir(path)
+				print ("Directory %s created" % path)
 		if video_date == today:
-			if os.path.isdir(path) == False:
-				try:
-					os.mkdir(path)
-				except OSError:
-					print ("Creation of the directory %s failed" % path)
-				else:
-					print ("Successfully created the directory %s " % path)
 			os.chdir(path)
-			print("Downloading " + channel_title + " " + download + " " + video_date)
 			fetch = subprocess.run(["youtube-dl", download], stdout=subprocess.DEVNULL)
-			# print("The exit code was: %d" % fetch.returncode)
+			print("Downloading %s %s %s %s" % (channel_title, download, video_date, video_title))
+			print("The exit code was: %d" % fetch.returncode)
 			os.chdir("..")
 
 if __name__ == "__main__":

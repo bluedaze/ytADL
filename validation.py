@@ -37,7 +37,7 @@ class User_data:
 			self.url = "UU" + mo.group()[22::]
 
 def insert_data(*args):
-	insert_Sql = "INSERT INTO yt (channel_title, channel_id, uploads_id, video_id , video_date) VALUES (?, ?, ?, ?, ?)"
+	insert_Sql = "INSERT INTO yt (channel_title, channel_id, uploads_id, video_id, video_date, video_title) VALUES (?, ?, ?, ?, ?, ?)"
 	conn = sqlite3.connect('ytadl.db')
 	c = conn.cursor()
 	try:
@@ -49,7 +49,7 @@ def insert_data(*args):
 	conn.close()
 
 def create_db():
-	table_sql = "CREATE TABLE IF NOT EXISTS yt (channel_title TEXT, channel_id TEXT, uploads_id TEXT, video_id TEXT NOT NULL UNIQUE, video_date TEXT)"
+	table_sql = "CREATE TABLE IF NOT EXISTS yt (channel_title TEXT, channel_id TEXT, uploads_id TEXT, video_id TEXT NOT NULL UNIQUE, video_date TEXT, video_title TEXT)"
 
 	conn = sqlite3.connect('ytadl.db')
 	c = conn.cursor()
@@ -64,7 +64,7 @@ def query_db(distinct = None):
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
 	if distinct == None:
-		c.execute("SELECT channel_title, video_id, video_date FROM yt;")
+		c.execute("SELECT channel_title, video_id, video_date, video_title FROM yt;")
 	elif distinct == distinct:
 		c.execute("SELECT DISTINCT channel_title, uploads_id FROM yt;")
 	selected = [tuple(row) for row in c.fetchall()]
