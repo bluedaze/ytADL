@@ -57,13 +57,16 @@ def create_db():
 	c.close()
 	conn.close()
 
-def query_db():
+def query_db(distinct = None):
 	# Retrieves video_id matching today's date from the database.
 	today = datetime.datetime.now().isoformat()[0:10]
 	conn = sqlite3.connect("ytadl.db")
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
-	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date FROM yt WHERE video_date = ?;", ( today,))
+	if distinct == None:
+		c.execute("SELECT channel_title, video_id, video_date FROM yt;")
+	elif distinct == distinct:
+		c.execute("SELECT DISTINCT channel_title, uploads_id FROM yt;")
 	selected = [tuple(row) for row in c.fetchall()]
 	c.close()
 	conn.close()

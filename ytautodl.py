@@ -19,10 +19,10 @@ def main():
 		create_db()
 		request_uploads(url)
 	elif args.d:
-		uploads = query_db()
+		uploads = query_db(distinct = "distinct")
 		for i in uploads:
-			request_uploads(i[2])
-			download_video()
+			request_uploads(i[1])
+		download_video()
 	else:
 		print("You did not specify arguments. Type ytautodl.py -h for more information on how to run this program")
 
@@ -39,29 +39,29 @@ def request_uploads(playlist_id):
 		insert_data(channel_title, channel_id, uploads_id, video_id, video_date)
 
 def download_video():
+	today = datetime.datetime.now().isoformat()[0:10]
 	#TO DO: Need function to organize content into folders based on channel name.
 	uploads = query_db()
 	ytprefix = "https://www.youtube.com/watch?v="
 	for i in uploads:
 		channel_title = i[0]
-		channel_id = i[1]
-		uploads_id = i[2]
-		video_id = i[3]
-		video_date = i[4]
+		video_id = i[1]
+		video_date = i[2]
 		path = "./" + channel_title
 		download = ytprefix + video_id
-		if os.path.isdir(path) == False:
-			try:
-				os.mkdir(path)
-			except OSError:
-				print ("Creation of the directory %s failed" % path)
-			else:
-				print ("Successfully created the directory %s " % path)
-		os.chdir(path)
-		print("Downloading " + channel_title + " " + download)
-		fetch = subprocess.run(["youtube-dl", download], stdout=subprocess.DEVNULL)
-		print("The exit code was: %d" % fetch.returncode)
-		os.chdir("..")
+		if video_date == today:
+			if os.path.isdir(path) == False:
+				try:
+					os.mkdir(path)
+				except OSError:
+					print ("Creation of the directory %s failed" % path)
+				else:
+					print ("Successfully created the directory %s " % path)
+			os.chdir(path)
+			print("Downloading " + channel_title + " " + download + " " + video_date)
+			fetch = subprocess.run(["youtube-dl", download], stdout=subprocess.DEVNULL)
+			# print("The exit code was: %d" % fetch.returncode)
+			os.chdir("..")
 
 if __name__ == "__main__":
 	main()
