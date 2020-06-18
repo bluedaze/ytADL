@@ -15,8 +15,8 @@ class User_data:
 
 	def user_link(self, url):
 		''' Error message for invalid link. '''
-		message = "To create an entry we need the channel url."
-		message += "\n\nHere is an example using Google's youtube channel: https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA" 
+		message = '''To create an entry we need the channel url.
+		\n\nHere is an example using Google's youtube channel: https://www.youtube.com/channel/UCK8sQmJBp8GCxrOtXWBpyEA''' 
 
 		for c in message:
 			sys.stdout.write(c)
@@ -49,6 +49,7 @@ def insert_data(*args):
 	conn.close()
 
 def create_db():
+	#TODO add entry in database which marks whether or not a video has been downloaded.
 	table_sql = "CREATE TABLE IF NOT EXISTS yt (channel_title TEXT, channel_id TEXT, uploads_id TEXT, video_id TEXT NOT NULL UNIQUE, video_date TEXT, video_title TEXT)"
 
 	conn = sqlite3.connect('ytadl.db')
@@ -57,16 +58,13 @@ def create_db():
 	c.close()
 	conn.close()
 
-def query_db(distinct = None):
-	# Retrieves video_id matching today's date from the database.
-	today = datetime.datetime.now().isoformat()[0:10]
+def query_db():
+	# Returns values from database.
+	# Needs refactoring. Use *args and *kwargs, or return the same answer every time and parse in function.
 	conn = sqlite3.connect("ytadl.db")
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
-	if distinct == None:
-		c.execute("SELECT channel_title, video_id, video_date, video_title FROM yt;")
-	elif distinct == distinct:
-		c.execute("SELECT DISTINCT channel_title, uploads_id FROM yt;")
+	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date, video_title FROM yt;")
 	selected = [tuple(row) for row in c.fetchall()]
 	c.close()
 	conn.close()
