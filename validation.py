@@ -34,10 +34,13 @@ class User_data:
 			print("~~~~~~~~~~~~~~~\n\n\nThat is not the link we are looking for.\n")
 			self.user_link(self.url)
 		else:
-			self.url = "UU" + mo.group()[22::]
+			# https://www.youtube.com/feeds/videos.xml?channel_id=UCuXy5tCgEninup9cGplbiFw
+			self.url = mo.group()[20::]
+			print(self.url)
 
 def insert_data(*args):
-	insert_Sql = "INSERT INTO yt (channel_title, channel_id, uploads_id, video_id, video_date, video_title) VALUES (?, ?, ?, ?, ?, ?)"
+	# Inserts data from parse_ytrss()
+	insert_Sql = "INSERT INTO ytadl (channel_title, channel_id, uploads_id, video_id, video_date, video_title, description, downloaded) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	conn = sqlite3.connect('ytadl.db')
 	c = conn.cursor()
 	try:
@@ -49,8 +52,9 @@ def insert_data(*args):
 	conn.close()
 
 def create_db():
-	#TODO add entry in database which marks whether or not a video has been downloaded.
-	table_sql = "CREATE TABLE IF NOT EXISTS yt (channel_title TEXT, channel_id TEXT, uploads_id TEXT, video_id TEXT NOT NULL UNIQUE, video_date TEXT, video_title TEXT)"
+	# Creates a database if it does not exist.
+	table_sql = "CREATE TABLE IF NOT EXISTS ytadl (channel_title TEXT, channel_id TEXT, uploads_id TEXT, \
+	video_id TEXT NOT NULL UNIQUE, video_date TEXT, video_title TEXT, description TEXT, downloaded TEXT)"
 
 	conn = sqlite3.connect('ytadl.db')
 	c = conn.cursor()
@@ -60,15 +64,24 @@ def create_db():
 
 def query_db():
 	# Returns values from database.
-	# Needs refactoring. Use *args and *kwargs, or return the same answer every time and parse in function.
 	conn = sqlite3.connect("ytadl.db")
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
-	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date, video_title FROM yt;")
+	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date, video_title, downloaded FROM ytadl where downloaded != '0';")
 	selected = [tuple(row) for row in c.fetchall()]
 	c.close()
 	conn.close()
 	return selected
 
+def mark_downloaded(video_id):
+	# marks videos as downloaded.
+	conn = sqlite3.connect("ytadl.db")
+	c = conn.cursor()
+	c.execute("UPDATE ytadl SET downloaded = 0 WHERE video_id = ?", (video_id,))
+	conn.commit()
+	c.close()
+	conn.close()
+
+
 if __name__ == "__main__":
-	print(User_data())
+	User_data()
