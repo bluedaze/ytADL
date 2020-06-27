@@ -204,7 +204,6 @@ def download_video():
 		sys.stdout.write(clearline)
 		fetch = subprocess.run(["youtube-dl", "--no-warnings", "-o", "%(uploader)s - %(title)s.%(ext)s", "--external-downloader", "aria2c", "--external-downloader-args", "'-x 8 -s 8 -k 1m'", download], stdout=subprocess.DEVNULL)
 		os.chdir("..")
-		print(fetch.returncode)
 		if fetch.returncode == 0:
 			mark_downloaded(video_id)
 
