@@ -66,26 +66,31 @@ def main():
 		search_results()
 
 	elif args.channels:
-		print(underline + matrixgreen + "Your Channels:" + removecolor)
+		print(f"{underline} {matrixgreen} Your Channels: {removecolor}")
 		channel_set = set()
 		data = query_db()
 
 		for i in data:
 			channel_set.add(i[0])
 		for i in channel_set:
-			print(matrixgreen + i + removecolor)
-		print()
-		print()
+			print(f"{matrixgreen} {i} {removecolor}\n\n")
 	else:
-		print(matrixgreen + "You did not specify arguments. Type ytautodl.py -h for more information on how to run this program\n" + removecolor)
+		print(f"{matrixgreen} You did not specify arguments. Type ytautodl.py -h for more information on how to run this program\n{removecolor}")
 
 	#TODO: Create argument that will allow you to add from CSV.
 	#TODO: Show related after videos are done downloading.
 
 def request_uploads(playlist_id):
 	# Deprecated. Reserving this method just in case youtube gets rid of their rss feed.
-	link = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=%s&key=%s" % (playlist_id, apikey)
-	r = requests.get(link)
+	params = {
+		"part": "snippet",
+		"playlistId": playlist_id,
+		"key": api_key
+		}
+
+
+	link = "https://www.googleapis.com/youtube/v3/playlistItems"
+	r = requests.get(link, params=params)
 	response = r.json()["items"]
 	for i in response:
 		channel_title = i["snippet"]["channelTitle"]
@@ -99,7 +104,7 @@ def request_uploads(playlist_id):
 def parse_ytrss(rss_link):
 	# New function will parse youtube rss feeds to reduce api requests.
 	#TODO: Skip videos which have been marked as downloaded.
-	rss_link = "https://www.youtube.com/feeds/videos.xml?channel_id=" + str(rss_link)
+	rss_link = f"https://www.youtube.com/feeds/videos.xml?channel_id={rss_link}"
 
 
 	r = requests.get(rss_link)
@@ -124,9 +129,15 @@ def search_results():
 	videos = []
 	search_query = input("Search: ")
 	search_query  = search_query.replace(' ', '%20')
-	linesep = "*------------------------------------------------------------------------------------------"
-	link = "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=%s&key=%s" % (search_query, apikey)
-	r = requests.get(link)
+	linesep = f"*{'-'*90}"
+	params = {
+		"part": "snippet",
+		"maxResults": 5,
+		"q": search_query,
+		"key": api_key
+	}
+	link = "https://www.googleapis.com/youtube/v3/search"
+	r = requests.get(link, params=params)
 	response = r.json()
 	count = 0
 	for i in response["items"]:
@@ -138,8 +149,7 @@ def search_results():
 		try:
 			video_id = i["id"]["videoId"]
 			videos.append(video_id)
-			print()
-			print()
+			print('\n\n')
 			print(linesep.replace("*", str(count)))
 			print("| Channel:", channelTitle)
 			print("| Video:", videoTitle)
@@ -150,13 +160,13 @@ def search_results():
 			print("| Uploaded:", publishTime)
 			print(linesep)
 		except KeyError:
-			count = count - 1
+			count -= 1
 			pass
 
 	print("totalResults:", response["pageInfo"]["totalResults"])
 	print("resultsPerPage:", response["pageInfo"]["resultsPerPage"])
 	choose_video = int(input("Enter a number to select which video you would like to see: "))
-	choose_video = choose_video - 1
+	choose_video -= 1
 	print(choose_video)
 	try:
 		print("https://www.youtube.com/watch?v=" + videos[choose_video])
