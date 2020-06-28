@@ -27,7 +27,7 @@ from validation import *
 import os
 import feedparser
 
-matrixgreen = "\u001b[38;5;46m"
+color_green = "\u001b[38;5;46m"
 removecolor = "\u001b[0m"
 underline = "\u001b[4m"
 
@@ -52,7 +52,7 @@ def main():
 	elif args.d:
 		# Query the database, create a set of unique ids, send a request for each unique id.
 		
-		uploads = query_db()
+		uploads = query_creators()
 		uid_set = set()
 
 		for i in uploads:
@@ -66,16 +66,16 @@ def main():
 		search_results()
 
 	elif args.channels:
-		print(f"{underline} {matrixgreen} Your Channels: {removecolor}")
+		print(f"{underline} {color_green} Your Channels: {removecolor}")
 		channel_set = set()
 		data = query_db()
 
 		for i in data:
 			channel_set.add(i[0])
 		for i in channel_set:
-			print(f"{matrixgreen} {i} {removecolor}\n\n")
+			print(f"{color_green} {i} {removecolor}\n\n")
 	else:
-		print(f"{matrixgreen} You did not specify arguments. Type ytautodl.py -h for more information on how to run this program\n{removecolor}")
+		print(f"{color_green} You did not specify arguments. Type ytautodl.py -h for more information on how to run this program\n{removecolor}")
 
 	#TODO: Create argument that will allow you to add from CSV.
 	#TODO: Show related after videos are done downloading.
@@ -169,14 +169,15 @@ def search_results():
 	choose_video -= 1
 	print(choose_video)
 	try:
-		print("https://www.youtube.com/watch?v=" + videos[choose_video])
+		print(f"https://www.youtube.com/watch?v={videos[choose_video]}")
 	except IndexError:
 		print("Not a valid number")
 	print(videos)
 
 def download_video():
+	channelName = ""
 	print("Searching for content...")
-	uploads = query_db()
+	uploads = query_creators()
 	ytprefix = "https://www.youtube.com/watch?v="
 	for i in uploads:
 		channel_title = i[0]
@@ -192,20 +193,28 @@ def download_video():
 		moveup = "\033[1A"
 		movedown = "\033[1B"
 		returnhome = "\u001b[1000D"
-		save = "\u001b[s"
-		sreturn = "\033[K"
+		bold = "\u001b[1m"
 
 		os.chdir(path)
-		sys.stdout.write(save + matrixgreen + "Video: %s \nChannel: %s" % (video_title, channel_title) + sreturn + removecolor)
+		if channelName != channel_title:
+		#TODO: Only print name once, until new youtube is added.
+			channelName = channel_title
+			print(f"{moveup}{returnhome}{clearline}{bold}{color_green}Channel: {channel_title}{removecolor}")
+		# sys.stdout.write(clearline)
+		print(f"{returnhome}{clearline}{color_green}Video: {video_title}{removecolor}", end="")
+		# print(f"{returnhome}", end ="")
 		sys.stdout.flush()
-		sys.stdout.write(returnhome)
-		sys.stdout.write(clearline)
-		sys.stdout.write(moveup)
-		sys.stdout.write(clearline)
+		# sys.stdout.flush()
+		# sys.stdout.write(returnhome)
+		# sys.stdout.write(clearline)
+		# sys.stdout.write(moveup)
+		# sys.stdout.write(clearline)
 		fetch = subprocess.run(["youtube-dl", "--no-warnings", "-o", "%(uploader)s - %(title)s.%(ext)s", "--external-downloader", "aria2c", "--external-downloader-args", "'-x 8 -s 8 -k 1m'", download], stdout=subprocess.DEVNULL)
 		os.chdir("..")
 		if fetch.returncode == 0:
 			mark_downloaded(video_id)
+		else:
+			continue
 
 if __name__ == "__main__":
 	ytadl = '''                                                                              
@@ -217,10 +226,10 @@ if __name__ == "__main__":
            VA ,V     MM      AbmmmqMA     MM     ,MP MM      ,                
             VVV      MM     A'     VML    MM    ,dP' MM     ,M                
             ,V       `Mbmo.AMA.   .AMMA..JMMmmmdP' .JMMmmmmMMM                
-           ,V                              made by Sean Pedigo                         
-        OOb"                                                                   
+           ,V                              made by Sean Pedigo
+         OOb                                                                   
                                                                               
 '''
-	sys.stdout.write(matrixgreen + ytadl + removecolor)
+	sys.stdout.write(f"{color_green} {ytadl} {removecolor}")
 	main()
-	print(matrixgreen + "Thank you for using ytautodl...\n\n" + removecolor)
+	print(f"\n\n{color_green}Thank you for using ytautodl...{removecolor}\n\n")

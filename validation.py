@@ -36,7 +36,6 @@ class User_data:
 		else:
 			# https://www.youtube.com/feeds/videos.xml?channel_id=UCuXy5tCgEninup9cGplbiFw
 			self.url = mo.group()[20::]
-			print(self.url)
 
 def insert_data(*args):
 	# Inserts data from parse_ytrss()
@@ -67,7 +66,18 @@ def query_db():
 	conn = sqlite3.connect("ytadl.db")
 	conn.row_factory = sqlite3.Row
 	c = conn.cursor()
-	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date, video_title, downloaded FROM ytadl where downloaded != '0';")
+	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date, video_title, downloaded FROM ytadl where downloaded != '1';")
+	selected = [tuple(row) for row in c.fetchall()]
+	c.close()
+	conn.close()
+	return selected
+
+def query_creators():
+	# Returns values from database.
+	conn = sqlite3.connect("ytadl.db")
+	conn.row_factory = sqlite3.Row
+	c = conn.cursor()
+	c.execute("SELECT channel_title, channel_id, uploads_id, video_id, video_date, video_title, downloaded FROM ytadl")
 	selected = [tuple(row) for row in c.fetchall()]
 	c.close()
 	conn.close()
@@ -77,7 +87,7 @@ def mark_downloaded(video_id):
 	# marks videos as downloaded.
 	conn = sqlite3.connect("ytadl.db")
 	c = conn.cursor()
-	c.execute("UPDATE ytadl SET downloaded = 0 WHERE video_id = ?", (video_id,))
+	c.execute("UPDATE ytadl SET downloaded = 1 WHERE video_id = ?", (video_id,))
 	conn.commit()
 	c.close()
 	conn.close()
