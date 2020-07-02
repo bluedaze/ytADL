@@ -14,7 +14,7 @@ ytADL is a wrapper around yt-download with sane defaults. It was designed first 
   -d            Download new videos.  
   -c            Display channels stored in database.  
   -v            Display downloaded videos.  
-  -search       Search youtube.  
+  -search       Search youtube. Rerequires youtube api key.
   -b            Send db info to txt file.  
   -silent       Run without logging.info to the cli.  
   -ep           Enable plex, and set plex options.  
