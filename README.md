@@ -8,7 +8,7 @@ ytADL is a wrapper around yt-download with sane defaults. It was designed first 
 
 # Currently working options:
   -h, --help    show this help message and exit  
-  -f F [F ...]  Set custome flags for youtube-dl  
+  -f F [F ...]  Set custome flags for youtube-dl.  
   -a            Add youtube api key. Only needed for search functionality. Would love a PR with a method that does not rely on youtube api.  
   -new          Add a new youtuber.  
   -d            Download new videos.  
