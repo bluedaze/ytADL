@@ -13,7 +13,6 @@ ytADL is a wrapper around yt-download with sane defaults. It was designed first 
   -new          Add a new youtuber.  
   -d            Download new videos.  
   -c            Display channels stored in database.  
-  -p            List your preferences.  
   -v            Display downloaded videos.  
   -search       Search youtube.  
   -b            Send db info to txt file.  
