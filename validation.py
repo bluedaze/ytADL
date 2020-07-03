@@ -110,10 +110,12 @@ def mark_downloaded(video_id):
     # marks videos as downloaded.
     conn = sqlite3.connect("ytadl.db")
     c = conn.cursor()
-    c.execute("UPDATE ytadl SET downloaded = 1 WHERE video_id = ?", (video_id,))
+    c.execute("UPDATE ytadl SET 'downloaded' = 1 WHERE video_id = ?", (video_id,))
+    # UPDATE "main"."ytadl" SET "downloaded"=? WHERE
     conn.commit()
     c.close()
     conn.close()
+
 
 def backup_query():
     # Returns values from database.
@@ -124,7 +126,7 @@ def backup_query():
     selected = [tuple(row) for row in c.fetchall()]
     c.close()
     conn.close()
-    with open('ytadl_backup.txt', 'w') as f:
+    with open("ytadl_backup.txt", "w") as f:
         for i in selected:
             channel_title = i[0]
             channel_id = i[1]
@@ -134,7 +136,10 @@ def backup_query():
             video_title = i[5]
             description = i[6]
             downloaded = i[7]
-            print(f"{channel_title},{channel_id},{uploads_id},{video_id},{video_date},{video_title},{downloaded}", file=f)
+            print(
+                f"{channel_title},{channel_id},{uploads_id},{video_id},{video_date},{video_title},{downloaded}",
+                file=f,
+            )
 
 
 if __name__ == "__main__":

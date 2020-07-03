@@ -2,42 +2,39 @@
 # Guide for getting details from youtube videos for future reference.
 # https://developers.google.com/youtube/v3/guides/implementation/videos
 # TODO: Allow users to play video from terminal. Possibly use mpv?
-# TODO: Allow users to download videos from search.
-# TODO: Show thumbnails in search.
+# TODO: ~Allow users to download videos from search.
+# TODO: ~Show thumbnails in search.
 # TODO: Allow users to add channel by name.
 # TODO: Create argument that will allow you to add from CSV.
-# TODO: Show related after videos are done downloading.
+# TODO: ~Show related after videos are done downloading.
 # TODO: Allow users to receive email notifcations.
+# TODO: Add plex options
+# TODO: Change flags. Examples ytadl list, ytadl search foo, ytadl config set api_key.. ytadl play --mpv
+# TODO: Requests sent needs massive speedup.
+# TODO: Make all flags work.
+# TODO: Add a filter for time.
+# TODO:
 
 # CHANGELOG: Sorta? idk? This is is what I am going to keep track of what has been changed.
-# 1.) Removed old function request_uploads()
-# 2.) Built framework for additional arguments, though some currently are not implemented entirely.
-# 3.) Implemented function which shows you all videos that have been downloaded.
-# 4.) Users may now specify their own youtube-dl functions.
-# 5.) Adding a new youtuber now shows confirmation, and the name of the youtuber that was added.
-# 6.) All flags are now moved to their own functions.
-# 7.) Major reformat of code, now implemented Python black to reformat code.
-# 8.) All important data can be backed up in a text file. Though I have not implemented a way to add data back to a database, yet. Ha!
+# 1.) Added logging.
+# 2.) Added silent mode.
+# 3.) Created tils file.
+# 4.)
+# 5.)
+# 6.)
+# 7.)
+# 8.)
 
 import requests
 import subprocess
 import argparse
 from apikey import apikey
 from validation import *
+from utils import *
 import os
 import feedparser
 import time
-
-color_green = "\u001b[38;5;46m"
-stripformatting = "\u001b[0m"
-underline = "\u001b[4m"
-clearline = "\033[K"
-moveup = "\033[1A"
-movedown = "\033[1B"
-returnhome = "\u001b[1000D"
-bold = "\u001b[1m"
-save = "\u001b[1s"
-goback = "\u001b[1u"
+import logging
 
 ytadl = '''                                                                              
                                                                               
@@ -55,7 +52,6 @@ ytadl = '''
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="A wrapper for youtube-dl that adds additional features."
     )
@@ -66,9 +62,13 @@ def main():
         help="Set default download path, else downloads in current location",
     )
     parser.add_argument(
-        "-f", action="store", nargs="+", help="Set custome flags for youtube-dl",
+        "-f", action="store", nargs="+", help="Set custom flags for youtube-dl.",
     )
-    parser.add_argument("-a", action="store_true", help="Add youtube api key")
+    parser.add_argument(
+        "-a",
+        action="store_true",
+        help="Add youtube api key. Only needed for search functionality. Would love a PR with a method that does not rely on youtube api.",
+    )
     parser.add_argument("-new", action="store_true", help="Add a new youtuber.")
     parser.add_argument(
         "-d", action="store_true", help="Download new videos.",
@@ -76,19 +76,38 @@ def main():
     parser.add_argument(
         "-c", action="store_true", help="Display channels stored in database.",
     )
-    parser.add_argument("-p", action="store_true", help="List your preferences")
+    parser.add_argument("-p", action="store_true", help="List your preferences.")
     parser.add_argument(
-        "-v", action="store_true", help="Display downloaded videos",
+        "-v", action="store_true", help="Display downloaded videos.",
     )
-    parser.add_argument("-search", action="store_true", help="Search youtube")
+    parser.add_argument(
+        "-search",
+        action="store_true",
+        help="Search youtube. Rerequires youtube api key.",
+    )
+    parser.add_argument("-pv", action="store_true", help="Play a video using mpv.")
     parser.add_argument("-b", action="store_true", help="Send db info to txt file.")
-    parser.add_argument(
-        "-silent", action="store_true", help="Run without print to the cli."
-    )
+    parser.add_argument("-silent", action="store_true", help="Run silently.")
     parser.add_argument(
         "-ep", action="store_true", help="enable plex, and set plex options"
     )
     args = parser.parse_args()
+
+    if args.silent:
+        log_mode = logging.basicConfig(level=logging.CRITICAL, format="")
+    else:
+        logger = logging.getLogger()
+        logger.setLevel(logging.INFO)
+
+        handler = logging.StreamHandler(sys.stdout)
+        handler.terminator = ""
+        handler.setLevel(logging.INFO)
+
+        formatter = logging.Formatter("")
+        handler.setFormatter(formatter)
+
+        logger.addHandler(handler)
+        logging.info(color(ytadl, text_color="matrix"))
 
     if args.new:
         new()
@@ -110,35 +129,44 @@ def main():
 
     elif args.f:
         download_video(args.f)
+
     elif args.b:
         backup_query()
 
-    else:
-        print(
-            f"{color_green} You did not specify arguments. Type ytautodl.py -h for more information on how to run this program\n{stripformatting}"
-        )
+    elif args.pv:
+        play_video()
+
+
+def play_video():
+    my_channels = channels()
+    obj = enumerate(my_channels, start=1)
+    for count, i in obj:
+        print(str(count) + ": " + str(i))
 
 
 def new():
     # Only creates database and inserts new entry.
 
     url = User_data()
+    logging.debug(f"User entered: {url}")
     create_db()
     # Returns details from the feed. Currently only returns youtube name.
     details = parse_ytrss(url)
 
-    print(f"\n\n\n\t{details} added to database")
+    logging.info(f"\n\n\n\t{details} added to database")
 
 
 def channels():
-    print(f"{underline} {color_green} Your Channels: {stripformatting}")
+    heading = color(underline("Your Channels:"), text_color="matrix")
+    logging.info(heading)
     channel_set = set()
-    data = query_db()
+    data = query_creators()
 
     for i in data:
         channel_set.add(i[0])
-    for i in channel_set:
-        print(f"{color_green} {i} {stripformatting}\n\n")
+    logging.debug(f"Channel set: {channel_set}")
+
+    return channel_set
 
 
 def videos():
@@ -150,8 +178,9 @@ def videos():
         entry = channel + video
         videos.append(entry)
     mylist = videos.sort()
+    logging.debug(f"Sorted videos: {mylist}")
     for i in videos:
-        print(i)
+        logging.info(i)
 
 
 def parse_ytrss(rss_link):
@@ -159,7 +188,9 @@ def parse_ytrss(rss_link):
     rss_link = f"https://www.youtube.com/feeds/videos.xml?channel_id={rss_link}"
 
     r = requests.get(rss_link)
+    logging.debug(f"Request status: {r}")
     page = r.text
+    logging.debug(f"Request response: {r}")
 
     d = feedparser.parse(page)
     entries = d.entries
@@ -183,7 +214,6 @@ def parse_ytrss(rss_link):
             description,
             downloaded,
         )
-
     return channel_title
 
 
@@ -207,38 +237,38 @@ def search_results():
         try:
             video_id = i["id"]["videoId"]
             videos.append(video_id)
-            print("\n\n")
-            print(linesep.replace("*", str(count)))
-            print("| Channel:", channelTitle)
-            print("| Video:", videoTitle)
+            logging.info("\n\n")
+            logging.info(linesep.replace("*", str(count)))
+            logging.info("| Channel:", channelTitle)
+            logging.info("| Video:", videoTitle)
             if description == "":
-                print("| Description: None")
+                logging.info("| Description: None")
             else:
-                print("| Description:", description)
-            print("| Uploaded:", publishTime)
-            print(linesep)
+                logging.info("| Description:", description)
+            logging.info("| Uploaded:", publishTime)
+            logging.info(linesep)
         except KeyError:
             count -= 1
             pass
 
-    print("totalResults:", response["pageInfo"]["totalResults"])
-    print("resultsPerPage:", response["pageInfo"]["resultsPerPage"])
+    logging.info("totalResults:", response["pageInfo"]["totalResults"])
+    logging.info("resultsPerPage:", response["pageInfo"]["resultsPerPage"])
     choose_video = int(
         input("Enter a number to select which video you would like to see: ")
     )
     choose_video -= 1
-    print(choose_video)
+    logging.info(choose_video)
     try:
-        print(f"https://www.youtube.com/watch?v={videos[choose_video]}")
+        logging.info(f"https://www.youtube.com/watch?v={videos[choose_video]}")
     except IndexError:
-        print("Not a valid number")
-    print(videos)
+        logging.info("Not a valid number")
+    logging.info(videos)
 
 
 def download_video(ytargs=None):
     """ Fetches videos marked as not downloaded, and downloads them """
 
-    print(f"{color_green}Searching for content...{stripformatting}")
+    logging.info(color("Searching for content...\n", text_color="matrix"))
 
     youtubers = query_creators()
     uid_set = set()
@@ -247,7 +277,8 @@ def download_video(ytargs=None):
         uid_set.add(i[1])
     for i in uid_set:
         parse_ytrss(i)
-    # Initialize variable channel. Will be used to prevent reprints of name of channel to the console
+    logging.debug(f"Set of creators: {uid_set}")
+    # Initialize variable channel. Will be used to prevent relogging.infos of name of channel to the console
     channelName = ""
     uploads = query_db()
     for i in uploads:
@@ -259,18 +290,15 @@ def download_video(ytargs=None):
         download = f"https://www.youtube.com/watch?v={video_id}"
         if os.path.isdir(path) == False:
             os.mkdir(path)
-            print(f"Directory {path} created")
-
+            logging.info(f"Directory {path} created")
         os.chdir(path)
+        logging.debug(f"Navigating to {path}")
         if channelName != channel_title:
             channelName = channel_title
-            print(
-                f"{moveup}{returnhome}{clearline}{color_green}Channel: {bold}{channel_title}{stripformatting}"
-            )
-        print(
-            f"{returnhome}{clearline}{color_green}Video: {video_title}{stripformatting}",
-            end="",
-        )
+            logging.info(
+                color(f"\r{up}{clearline}Channel:{bold(channel_title)}\n",
+                    text_color="matrix"))
+        logging.info(color(f"\r{clearline}Video:{video_title}", text_color="matrix"))
         sys.stdout.flush()
 
         flags = [
@@ -290,15 +318,22 @@ def download_video(ytargs=None):
             pass
         else:
             flags = ytargs
+        logging.debug(f"youtube-dl flags set to {flags}")
 
         fetch = subprocess.run(flags, stdout=subprocess.DEVNULL,)
+        logging.debug("Navigating to path")
+
         os.chdir("..")
 
         if fetch.returncode == 0:
+            logging.debug("Download return code {fetch.returncode}")
             mark_downloaded(video_id)
+        elif fetch.returncode == 1:
+            logging.error("Video failed to download")
 
 
 if __name__ == "__main__":
-    print(f"{color_green} {ytadl} {stripformatting}")
+    os.system("setterm -cursor off")
     main()
-    print(f"{color_green}\n\nThank you for using ytautodl...{stripformatting}\n\n")
+    os.system("setterm -cursor on")
+    logging.info(color("\n\nThank you for using ytautodl...\n\n", text_color="matrix"))
