@@ -1,5 +1,5 @@
 stripformatting = "\u001b[0m"
-clearline = "\u001b[2K"
+clearline = "\r\u001b[2K"
 up = "\033[1A"
 
 
@@ -30,7 +30,7 @@ def color(text, text_color=None):
         choice = color_choices["matrix"]
     else:
         choice = color_choices[text_color]
-    return r"".join([choice, text, stripformatting])
+    return "".join([choice, text, stripformatting])
 
 
 # returnhome = "\u001b[1000D"

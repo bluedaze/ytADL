@@ -4,39 +4,56 @@
 # TODO: Allow users to play video from terminal. Possibly use mpv?
 # TODO: ~Allow users to download videos from search.
 # TODO: ~Show thumbnails in search.
-# TODO: Allow users to add channel by name.
+# TODO: ~Allow users to add channel by name.
 # TODO: Create argument that will allow you to add from CSV.
 # TODO: ~Show related after videos are done downloading.
-# TODO: Allow users to receive email notifcations.
 # TODO: Add plex options
 # TODO: Change flags. Examples ytadl list, ytadl search foo, ytadl config set api_key.. ytadl play --mpv
-# TODO: Requests sent needs massive speedup.
 # TODO: Make all flags work.
 # TODO: Add a filter for time.
-# TODO:
+# TODO: Embed thumbnails in videos.
 
 # CHANGELOG: Sorta? idk? This is is what I am going to keep track of what has been changed.
-# 1.) Added logging.
-# 2.) Added silent mode.
-# 3.) Created tils file.
-# 4.)
-# 5.)
+# 1.) Added threading for parsing youtube feeds. Significant improvement fetch times, which was the slowest part of the program.
+# 2.) Had to update new() to be useful after refactoring parse_ytrss
+# 3.) Started on MPV function.
+# 4.) Refactored how ansi escape sequences are printed to make it more logical.
+# 5.) Refactored SQL functions. Data is not fetched immediately when the program is started, and flags filter prefetched data
+# according to user needs.
 # 6.)
 # 7.)
 # 8.)
 
+#Flags to change: 
+# -a
+# -c
+# -f
+
+from rich import print
+from rich.panel import Panel
+from rich.console import Console
+from rich.table import Column, Table
 import requests
 import subprocess
 import argparse
-from apikey import apikey
+# from apikey import apikey
 from validation import *
 from utils import *
 import os
 import feedparser
 import time
 import logging
+import threading
+try:
+    from apikey import apikey
+except ModuleNotFoundError:
+    missingApi = '''You are missing an API key. 
+If you want to use the search function please provide it'''
+searchVar = 0
+from sqlfunc import *
 
-ytadl = '''                                                                              
+obj = Information()
+ytadl = '''[bold green]                                                                              
                                                                               
                      mm         db      `7MM"""Yb. `7MMF'                     
                      MM        ;MM:       MM    `Yb. MM                       
@@ -106,8 +123,9 @@ def main():
         formatter = logging.Formatter("")
         handler.setFormatter(formatter)
 
+        console = Console()
         logger.addHandler(handler)
-        logging.info(color(ytadl, text_color="matrix"))
+        console.print(Panel(ytadl), width=100)
 
     if args.new:
         new()
@@ -137,60 +155,21 @@ def main():
         play_video()
 
 
-def play_video():
-    my_channels = channels()
-    obj = enumerate(my_channels, start=1)
-    for count, i in obj:
-        print(str(count) + ": " + str(i))
+# def play_video():
+#     my_channels = channels()
+#     obj = enumerate(my_channels, start=1)
+#     for count, i in obj:
+#         print(str(count) + ": " + str(i))
 
 
 def new():
-    # Only creates database and inserts new entry.
-
+    """ Fetch rss feed from youtube, and parse feed to look for new videos """
     url = User_data()
     logging.debug(f"User entered: {url}")
-    create_db()
-    # Returns details from the feed. Currently only returns youtube name.
-    details = parse_ytrss(url)
-
-    logging.info(f"\n\n\n\t{details} added to database")
-
-
-def channels():
-    heading = color(underline("Your Channels:"), text_color="matrix")
-    logging.info(heading)
-    channel_set = set()
-    data = query_creators()
-
-    for i in data:
-        channel_set.add(i[0])
-    logging.debug(f"Channel set: {channel_set}")
-
-    return channel_set
-
-
-def videos():
-    videos = []
-    data = query_videos()
-    for i in data:
-        channel = i[0].ljust(40)
-        video = i[2].ljust(40)
-        entry = channel + video
-        videos.append(entry)
-    mylist = videos.sort()
-    logging.debug(f"Sorted videos: {mylist}")
-    for i in videos:
-        logging.info(i)
-
-
-def parse_ytrss(rss_link):
-    """ Fetch rss feed from youtube, and parse feed to look for new videos """
-    rss_link = f"https://www.youtube.com/feeds/videos.xml?channel_id={rss_link}"
+    rss_link = f"https://www.youtube.com/feeds/videos.xml?channel_id={url}"
 
     r = requests.get(rss_link)
-    logging.debug(f"Request status: {r}")
     page = r.text
-    logging.debug(f"Request response: {r}")
 
     d = feedparser.parse(page)
     entries = d.entries
@@ -214,55 +193,149 @@ def parse_ytrss(rss_link):
             description,
             downloaded,
         )
-    return channel_title
+    logging.info(f"\n\n\n\t{channel_title} added to database")
 
+
+def channels():
+    '''
+    Returns a unique list of channels and display them to the terminal
+    '''
+    channels = obj.channels()
+    display = obj.display(channels, "Channels")
+
+
+def videos():
+    '''
+    Display all videos that have been downloaded to the terminal
+    '''
+    videos = obj.videos()
+    display = obj.display(videos, "Videos")
+
+
+def parse_ytrss():
+    """ Fetch rss feed from youtube, and parse feed to look for new videos """
+    # List of dictionaries for entries
+    youtubers = obj.query_db()
+    uid_set = set()
+
+    for i in youtubers:
+        uid_set.add(i[1])
+
+    rss_entries = []
+
+    def fetch_feed(uid):
+        rss_link = f"https://www.youtube.com/feeds/videos.xml?channel_id={uid}"
+
+        # Move to seperate function blow this.
+        r = requests.get(rss_link)
+        page = r.text
+
+        d = feedparser.parse(page)
+        entries = d.entries
+
+        for i in entries:
+            channel_title = i["authors"][0]["name"]
+            channel_id = i["yt_channelid"]
+            uploads_id = f"{'UU'}{channel_id[2::]}"
+            video_id = i["yt_videoid"]
+            video_date = i["published"][0:10]
+            video_title = i["title"]
+            description = i["summary"]
+            downloaded = "0"
+
+            d = {
+                "channel_title": channel_title,
+                "channel_id": channel_id,
+                "uploads_id": uploads_id,
+                "video_id": video_id,
+                "video_date": video_date,
+                "video_title": video_title,
+                "description": description,
+                "downloaded": downloaded,
+            }
+            rss_entries.append(d)
+            # Append to dictionary with this function.
+
+    threads = []
+    for i in uid_set:
+        t = threading.Thread(target=fetch_feed, args=[i])
+        t.start()
+        threads.append(t)
+
+    for thread in threads:
+        thread.join()
+
+    # Create seperate function.
+    for i in rss_entries:
+        channel_title = i["channel_title"]
+        channel_id = i["channel_id"]
+        uploads_id = i["uploads_id"]
+        video_id = i["video_id"]
+        video_date = i["video_date"]
+        video_title = i["video_title"]
+        description = i["description"]
+        downloaded = i["downloaded"]
+        obj.insert_data(
+            channel_title,
+            channel_id,
+            uploads_id,
+            video_id,
+            video_date,
+            video_title,
+            description,
+            downloaded,
+        )
 
 def search_results():
     """ Uses Google api to search, must supply your own api key """
-    videos = []
-    search_query = input("Search: ")
-    search_query = search_query.replace(" ", "%20")
-    linesep = f"*{'-'*90}"
-    params = {"part": "snippet", "maxResults": 5, "q": search_query, "key": api_key}
-    link = "https://www.googleapis.com/youtube/v3/search"
-    r = requests.get(link, params=params)
-    response = r.json()
-    count = 0
-    for i in response["items"]:
-        count = count + 1
-        channelTitle = i["snippet"]["channelTitle"]
-        videoTitle = i["snippet"]["title"]
-        description = i["snippet"]["description"]
-        publishTime = i["snippet"]["publishTime"]
-        try:
-            video_id = i["id"]["videoId"]
-            videos.append(video_id)
-            logging.info("\n\n")
-            logging.info(linesep.replace("*", str(count)))
-            logging.info("| Channel:", channelTitle)
-            logging.info("| Video:", videoTitle)
-            if description == "":
-                logging.info("| Description: None")
-            else:
-                logging.info("| Description:", description)
-            logging.info("| Uploaded:", publishTime)
-            logging.info(linesep)
-        except KeyError:
-            count -= 1
-            pass
+    if searchVar == 0:
+        print(missingApi)
+        pass
+    else:
+        videos = []
+        search_query = input("Search: ")
+        search_query = search_query.replace(" ", "%20")
+        linesep = f"*{'-'*90}"
+        params = {"part": "snippet", "maxResults": 5, "q": search_query, "key": api_key}
+        link = "https://www.googleapis.com/youtube/v3/search"
+        r = requests.get(link, params=params)
+        response = r.json()
+        count = 0
+        for i in response["items"]:
+            count = count + 1
+            channelTitle = i["snippet"]["channelTitle"]
+            videoTitle = i["snippet"]["title"]
+            description = i["snippet"]["description"]
+            publishTime = i["snippet"]["publishTime"]
+            try:
+                video_id = i["id"]["videoId"]
+                videos.append(video_id)
+                logging.info("\n\n")
+                logging.info(linesep.replace("*", str(count)))
+                logging.info("| Channel:", channelTitle)
+                logging.info("| Video:", videoTitle)
+                if description == "":
+                    logging.info("| Description: None")
+                else:
+                    logging.info("| Description:", description)
+                logging.info("| Uploaded:", publishTime)
+                logging.info(linesep)
+            except KeyError:
+                count -= 1
+                pass
 
-    logging.info("totalResults:", response["pageInfo"]["totalResults"])
-    logging.info("resultsPerPage:", response["pageInfo"]["resultsPerPage"])
-    choose_video = int(
-        input("Enter a number to select which video you would like to see: ")
-    )
-    choose_video -= 1
-    logging.info(choose_video)
-    try:
-        logging.info(f"https://www.youtube.com/watch?v={videos[choose_video]}")
-    except IndexError:
-        logging.info("Not a valid number")
-    logging.info(videos)
+        logging.info("totalResults:", response["pageInfo"]["totalResults"])
+        logging.info("resultsPerPage:", response["pageInfo"]["resultsPerPage"])
+        choose_video = int(
+            input("Enter a number to select which video you would like to see: ")
+        )
+        choose_video -= 1
+        logging.info(choose_video)
+        try:
+            logging.info(f"https://www.youtube.com/watch?v={videos[choose_video]}")
+        except IndexError:
+            logging.info("Not a valid number")
+        logging.info(videos)
 
 
 def download_video(ytargs=None):
@@ -270,34 +343,31 @@ def download_video(ytargs=None):
 
     logging.info(color("Searching for content...\n", text_color="matrix"))
 
-    youtubers = query_creators()
-    uid_set = set()
-
-    for i in youtubers:
-        uid_set.add(i[1])
-    for i in uid_set:
-        parse_ytrss(i)
-    logging.debug(f"Set of creators: {uid_set}")
+    parse_ytrss()
     # Initialize variable channel. Will be used to prevent relogging.infos of name of channel to the console
     channelName = ""
-    uploads = query_db()
-    for i in uploads:
-        channel_title = i[0]
-        video_id = i[3]
-        video_date = i[4]
-        video_title = i[5]
+    data = obj.in_queue()
+    for i in data:
+        channel_title = i['channel_title']
+        video_id = i["video_id"]
+        video_date = i["video_date"]
+        video_title = i["video_title"]
         path = f"{os.getcwd()}{'/'}{channel_title}"
         download = f"https://www.youtube.com/watch?v={video_id}"
+
         if os.path.isdir(path) == False:
             os.mkdir(path)
             logging.info(f"Directory {path} created")
         os.chdir(path)
-        logging.debug(f"Navigating to {path}")
+
         if channelName != channel_title:
             channelName = channel_title
             logging.info(
-                color(f"\r{up}{clearline}Channel:{bold(channel_title)}\n",
-                    text_color="matrix"))
+                color(
+                    f"\r{up}{clearline}Channel:{bold(channel_title)}\n",
+                    text_color="matrix",
+                )
+            )
         logging.info(color(f"\r{clearline}Video:{video_title}", text_color="matrix"))
         sys.stdout.flush()
 
@@ -318,18 +388,15 @@ def download_video(ytargs=None):
             pass
         else:
             flags = ytargs
-        logging.debug(f"youtube-dl flags set to {flags}")
 
-        fetch = subprocess.run(flags, stdout=subprocess.DEVNULL,)
-        logging.debug("Navigating to path")
+        fetch = subprocess.run(flags, stdout=subprocess.DEVNULL)
 
         os.chdir("..")
 
         if fetch.returncode == 0:
-            logging.debug("Download return code {fetch.returncode}")
-            mark_downloaded(video_id)
+            obj.mark_downloaded(video_id)
         elif fetch.returncode == 1:
-            logging.error("Video failed to download")
+            print("{channel_title} - {video_title} did not download.")
 
 
 if __name__ == "__main__":
